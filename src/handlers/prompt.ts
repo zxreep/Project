@@ -17,9 +17,9 @@ function parseUserId(input?: string): bigint | null {
   }
 }
 
-const promotedMessage = `🎉 <b>You're Now an Admin!</b>
+const promotedMessage = `🎉 <bold>You're Now an Admin!</bold>
 
-Congratulations! You’ve been promoted to <b>Admin</b> 🚀
+Congratulations! You’ve been promoted to <bold>Admin</bold> 🚀
 
 🛠 You can now:
 • Create and manage quizzes

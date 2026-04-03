@@ -57,7 +57,7 @@ export function registerStartHandler(bot: Bot<BotContext>): void {
 
       await sendLogToGroup(
         ctx.api,
-        `✅ <b>/start success</b>\nUser: <code>${ctx.from.username ?? "n/a"}</code>\nID: <code>${telegramId.toString()}</code>\nRole: <b>${humanRole(savedRole ?? role)}</b>`
+        `✅ <bold>/start success</b>\nUser: <code>${ctx.from.username ?? "n/a"}</code>\nID: <code>${telegramId.toString()}</code>\nRole: <b>${humanRole(savedRole ?? role)}</bold>`
       );
 
       await ctx.reply(`${baseMessage}\n\n🔐 Your role: ${humanRole(savedRole ?? role)}`);
@@ -69,7 +69,7 @@ export function registerStartHandler(bot: Bot<BotContext>): void {
 
       await sendLogToGroup(
         ctx.api,
-        `❌ <b>/start failed</b>\nUser: <code>${ctx.from.username ?? "n/a"}</code>\nID: <code>${telegramId.toString()}</code>`
+        `❌ <bold>/start failed</bold>\nUser: <code>${ctx.from.username ?? "n/a"}</code>\nID: <code>${telegramId.toString()}</code>`
       );
 
       await ctx.reply("Sorry, something went wrong while setting up your account. Please try again.");
