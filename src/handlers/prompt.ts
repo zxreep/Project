@@ -1,6 +1,12 @@
-import { Bot } from "grammy";
+import { Role } from "@prisma/client";
+import { InlineKeyboard, type Api, type Bot } from "grammy";
 import { env } from "../config/env";
 import { prisma } from "../db/prisma";
+import {
+  buildReferralLink,
+  getOrCreateReferralToken,
+  syncUserFromContext
+} from "../services/referral";
 import { sendLogToGroup } from "../services/logGroup";
 import type { BotContext } from "../types/bot";
 import { logger } from "../utils/logger";
@@ -31,6 +37,36 @@ Congratulations! You’ve been promoted to <b>Admin</b> 🚀
 
 Let’s get started 💼`;
 
+function isPrivileged(actorId: bigint): boolean {
+  return actorId === env.SUPERADMIN_ID;
+}
+
+export async function notifyReferralSystemUpdate(api: Api, botUsername: string): Promise<void> {
+  const privilegedUsers = await prisma.user.findMany({
+    where: {
+      role: {
+        in: [Role.ADMIN, Role.SUPERADMIN]
+      }
+    }
+  });
+
+  for (const user of privilegedUsers) {
+    try {
+      const token = await getOrCreateReferralToken(user.id);
+      const link = buildReferralLink(botUsername, token);
+      await api.sendMessage(
+        user.telegramId.toString(),
+        `🚀 Referral system is now live!\n\nYour referral link:\n${link}`
+      );
+    } catch (error) {
+      logger.warn("Failed to send referral rollout message", {
+        userId: user.telegramId.toString(),
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+}
+
 export function registerPromptHandler(bot: Bot<BotContext>): void {
   bot.command("prompt", async (ctx) => {
     if (!ctx.from) {
@@ -40,7 +76,7 @@ export function registerPromptHandler(bot: Bot<BotContext>): void {
 
     const actorId = BigInt(ctx.from.id);
 
-    if (actorId !== env.SUPERADMIN_ID) {
+    if (!isPrivileged(actorId)) {
       logger.warn("Unauthorized /prompt attempt", {
         actorId: actorId.toString(),
         username: ctx.from.username ?? null
@@ -69,14 +105,21 @@ export function registerPromptHandler(bot: Bot<BotContext>): void {
     }
 
     try {
+      const existing = await prisma.user.findUnique({ where: { telegramId: targetTelegramId } });
+
       const promotedUser = await prisma.user.upsert({
         where: { telegramId: targetTelegramId },
-        update: { ...( { role: "ADMIN" } as Record<string, unknown> ) },
+        update: {
+          role: Role.ADMIN
+        },
         create: {
           telegramId: targetTelegramId,
-          ...( { role: "ADMIN" } as Record<string, unknown> )
+          role: Role.ADMIN
         }
       });
+
+      const token = await getOrCreateReferralToken(promotedUser.id);
+      const referralLink = buildReferralLink(ctx.me.username, token);
 
       logger.info("Promoted user to admin", {
         actorId: actorId.toString(),
@@ -84,10 +127,11 @@ export function registerPromptHandler(bot: Bot<BotContext>): void {
       });
 
       await ctx.api.sendMessage(targetTelegramId.toString(), promotedMessage, {
-        parse_mode: "HTML"
+        parse_mode: "HTML",
+        reply_markup: new InlineKeyboard().url("GET REFERRAL LINK", referralLink)
       });
 
-      const targetUsername = promotedUser.username ?? "unknown";
+      const targetUsername = promotedUser.username ?? existing?.username ?? "unknown";
       await ctx.reply(`USER ${targetUsername} (${targetTelegramId.toString()})\nSuccessfully promoted to Admin.`);
 
       await sendLogToGroup(
@@ -107,5 +151,69 @@ export function registerPromptHandler(bot: Bot<BotContext>): void {
 
       await ctx.reply("Could not promote this user right now. Please try again.");
     }
+  });
+
+  bot.command("referral", async (ctx) => {
+    if (!ctx.from) {
+      await ctx.reply("Unable to identify your Telegram account.");
+      return;
+    }
+
+    const user = await syncUserFromContext(ctx);
+
+    if (user.role !== Role.ADMIN && user.role !== Role.SUPERADMIN) {
+      await ctx.reply("Referral links are available for admins only.");
+      return;
+    }
+
+    const token = await getOrCreateReferralToken(user.id);
+    const link = buildReferralLink(ctx.me.username, token);
+
+    await ctx.reply(`🔗 Your referral link:\n${link}`);
+  });
+
+  bot.command("my_referrals", async (ctx) => {
+    if (!ctx.from) {
+      await ctx.reply("Unable to identify your Telegram account.");
+      return;
+    }
+
+    const admin = await prisma.user.findUnique({ where: { telegramId: BigInt(ctx.from.id) } });
+    if (!admin || (admin.role !== Role.ADMIN && admin.role !== Role.SUPERADMIN)) {
+      await ctx.reply("This command is for admins only.");
+      return;
+    }
+
+    const count = await prisma.user.count({ where: { referredById: admin.id } });
+    await ctx.reply(`👥 Total referred users: ${count}`);
+  });
+
+  bot.command("my_users", async (ctx) => {
+    if (!ctx.from) {
+      await ctx.reply("Unable to identify your Telegram account.");
+      return;
+    }
+
+    const admin = await prisma.user.findUnique({ where: { telegramId: BigInt(ctx.from.id) } });
+    if (!admin || (admin.role !== Role.ADMIN && admin.role !== Role.SUPERADMIN)) {
+      await ctx.reply("This command is for admins only.");
+      return;
+    }
+
+    const users = await prisma.user.findMany({
+      where: { referredById: admin.id },
+      orderBy: { createdAt: "desc" },
+      take: 50
+    });
+
+    if (users.length === 0) {
+      await ctx.reply("No users referred yet.");
+      return;
+    }
+
+    const text = users
+      .map((u, i) => `${i + 1}. ${u.username ? `@${u.username}` : u.firstName ?? "Unnamed"} (${u.telegramId.toString()})`)
+      .join("\n");
+    await ctx.reply(`📋 Your users:\n${text}`);
   });
 }

@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import http from "node:http";
 import { GrammyError, HttpError } from "grammy";
 import { createBot } from "./bot";
+import { notifyReferralSystemUpdate } from "./handlers/prompt";
 import { env } from "./config/env";
 import { prisma } from "./db/prisma";
 import { logger } from "./utils/logger";
@@ -92,6 +93,7 @@ async function bootstrap(): Promise<void> {
   await bot.start({
     onStart: (botInfo) => {
       logger.info("Bot started", { username: botInfo.username, id: botInfo.id });
+      void notifyReferralSystemUpdate(bot.api, botInfo.username);
     }
   });
 

@@ -11,6 +11,7 @@ Starter template for a Telegram bot using:
 ```bash
 npm install
 cp .env.example .env
+npm run prisma:generate
 ```
 
 Fill `.env` values:
@@ -20,66 +21,50 @@ Fill `.env` values:
 - `LOG_GROUP_ID`: Telegram group/channel id for audit logs
 - `PORT`: HTTP port for `/health` (Render sets this automatically)
 
-## 2) Generate Prisma client
-
-```bash
-npm run prisma:generate
-```
-
-(Optional) Create/apply schema in DB:
-
-```bash
-npm run prisma:push
-```
-
-## 3) Run locally
+## 2) Run locally
 
 ```bash
 npm run dev
 ```
 
-## Commands
+## Core Commands
 
-- `/start`: saves/updates user in database and sends welcome message with role (`user`, `admin`, `superadmin`).
-- `/prompt <userid>`: superadmin-only command to promote a user to admin.
+- `/start [token]`: onboarding + optional referral assignment
+- `/prompt <userid>`: superadmin-only promotion to admin
+- `/referral`: get/generate your referral link (admins/superadmins)
+- `/my_referrals`: total referred users count
+- `/my_users`: list users assigned to you
 
-### Superadmin panel buttons (shown on `/start`)
+## Referral System
 
-When superadmin sends `/start`, bot shows inline buttons:
-- `CHECK USERS` → sends role `USER` list
-- `CHECK ADMINS` → sends role `ADMIN` list
+- Every admin/superadmin gets a unique referral link:
+  - `https://t.me/<bot_username>?start=<token>`
+- Token is secure random and unique, stored in `ReferralToken` table.
+- On `/start <token>`:
+  - token resolves to admin
+  - user is assigned via `referredById`
+  - self-referral is blocked
+  - repeated same referral clicks are ignored
+  - if user already belongs to another admin, assignment is changed to the new admin (as requested)
 
-### Promotion behavior
+## Superadmin Panel
 
-When a user is promoted:
-- promoted user receives formatted promotion message
-- superadmin receives:
-  - `USER <username> (<USERID>)`
-  - `Successfully promoted to Admin.`
-- user role is updated to `ADMIN` in database
+When superadmin sends `/start`, bot shows:
+- `CHECK USERS`
+- `CHECK ADMINS`
 
-## Group logging
+## Group Logging
 
 The bot sends event logs to `LOG_GROUP_ID`, including:
 - incoming updates
-- `/start` success/failure
-- `/prompt` success/failure
-- unauthorized promotion attempts
-- superadmin panel button actions
+- start/promotion/referral events
+- superadmin panel actions
+- failed operations
 
 ## Health endpoint
 
 - `GET /health` returns JSON indicating the process is alive.
 
-## 4) Deploy to Render
+## Deploy to Render
 
-This repo includes `render.yaml` for a **web** service.
-
-Render steps:
-1. Create a new **Blueprint** on Render and point to this repository.
-2. Set environment variables in Render dashboard:
-   - `BOT_TOKEN`
-   - `DATABASE_URL`
-   - `SUPERADMIN_ID`
-   - `LOG_GROUP_ID`
-3. Deploy.
+This repo includes `render.yaml` for a **web** service with `healthCheckPath: /health`.

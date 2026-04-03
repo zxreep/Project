@@ -1,3 +1,4 @@
+import { Role } from "@prisma/client";
 import { InlineKeyboard, type Bot } from "grammy";
 import { env } from "../config/env";
 import { prisma } from "../db/prisma";
@@ -47,7 +48,7 @@ export function registerSuperadminPanelHandlers(bot: Bot<BotContext>): void {
     try {
       if (ctx.callbackQuery.data === "sa_check_users") {
         const users = await prisma.user.findMany({
-          where: { ...( { role: "USER" } as Record<string, unknown> ) },
+          where: { role: Role.USER },
           orderBy: { createdAt: "desc" },
           take: 50,
           select: {
@@ -56,7 +57,7 @@ export function registerSuperadminPanelHandlers(bot: Bot<BotContext>): void {
             firstName: true,
             lastName: true
           }
-        } as never);
+        });
 
         await ctx.reply(formatUserList("👥 USER LIST", users));
         await ctx.answerCallbackQuery({ text: "User list sent." });
@@ -69,7 +70,7 @@ export function registerSuperadminPanelHandlers(bot: Bot<BotContext>): void {
       }
 
       const admins = await prisma.user.findMany({
-        where: { ...( { role: "ADMIN" } as Record<string, unknown> ) },
+        where: { role: Role.ADMIN },
         orderBy: { createdAt: "desc" },
         take: 50,
         select: {
@@ -78,7 +79,7 @@ export function registerSuperadminPanelHandlers(bot: Bot<BotContext>): void {
           firstName: true,
           lastName: true
         }
-      } as never);
+      });
 
       await ctx.reply(formatUserList("🛡 ADMIN LIST", admins));
       await ctx.answerCallbackQuery({ text: "Admin list sent." });

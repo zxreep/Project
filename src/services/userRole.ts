@@ -1,32 +1,32 @@
-export type UserRole = "USER" | "ADMIN" | "SUPERADMIN";
+import { Role, type User } from "@prisma/client";
 
-interface MinimalUser {
-  role?: UserRole | null;
-}
-
-export function resolveRole(telegramId: bigint, superadminId: bigint, existingUser: MinimalUser | null): UserRole {
+export function resolveRole(telegramId: bigint, superadminId: bigint, existingUser: User | null): Role {
   if (telegramId === superadminId) {
-    return "SUPERADMIN";
+    return Role.SUPERADMIN;
   }
 
-  if (!existingUser?.role) {
-    return "USER";
+  if (!existingUser) {
+    return Role.USER;
   }
 
-  if (existingUser.role === "SUPERADMIN") {
-    return "USER";
+  if (existingUser.role === Role.SUPERADMIN) {
+    return Role.USER;
   }
 
   return existingUser.role;
 }
 
-export function humanRole(role: string | null | undefined): "user" | "admin" | "superadmin" {
-  if (role === "SUPERADMIN") {
+export function humanRole(role: Role): "user" | "admin" | "moderator" | "superadmin" {
+  if (role === Role.SUPERADMIN) {
     return "superadmin";
   }
 
-  if (role === "ADMIN") {
+  if (role === Role.ADMIN) {
     return "admin";
+  }
+
+  if (role === Role.MODERATOR) {
+    return "moderator";
   }
 
   return "user";
