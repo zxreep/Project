@@ -22,8 +22,20 @@ function parseBigIntEnv(name: string): bigint {
   }
 }
 
+function parsePort(): number {
+  const raw = process.env.PORT ?? "10000";
+  const parsed = Number(raw);
+
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+    throw new Error("Environment variable PORT must be a valid TCP port number (1-65535).");
+  }
+
+  return parsed;
+}
+
 export const env = {
   BOT_TOKEN: requireEnv("BOT_TOKEN"),
   DATABASE_URL: requireEnv("DATABASE_URL"),
-  SUPERADMIN_ID: parseBigIntEnv("SUPERADMIN_ID")
+  SUPERADMIN_ID: parseBigIntEnv("SUPERADMIN_ID"),
+  PORT: parsePort()
 };

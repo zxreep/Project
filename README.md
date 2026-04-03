@@ -17,6 +17,7 @@ Fill `.env` values:
 - `BOT_TOKEN`: Telegram bot token from BotFather
 - `DATABASE_URL`: Neon Postgres connection string
 - `SUPERADMIN_ID`: Telegram user id for superadmin access
+- `PORT`: HTTP port for `/health` (Render sets this automatically)
 
 ## 2) Generate Prisma client
 
@@ -41,21 +42,25 @@ npm run dev
 - `/start`: saves/updates user in database and sends welcome message with role (`user`, `admin`, `superadmin`).
 - `/prompt <userid>`: superadmin-only command to promote a user to admin.
 
+## Health endpoint
+
+- `GET /health` returns JSON indicating the process is alive.
+- Useful for Render health checks and uptime probes.
+
 ## Logging / Debugging
 
 The bot writes structured JSON logs for:
 - startup/shutdown lifecycle
 - database connection state
+- prisma schema sync (`prisma db push`) output
 - every incoming Telegram update
 - command success/failures
 - unhandled exceptions and promise rejections
 - grammY API/network/runtime errors
 
-These logs are designed to help troubleshoot Render exits and runtime failures.
-
 ## 4) Deploy to Render
 
-This repo includes `render.yaml` for a worker service (long polling).
+This repo includes `render.yaml` for a **web** service.
 
 Render steps:
 1. Create a new **Blueprint** on Render and point to this repository.
