@@ -43,6 +43,12 @@ npm run dev
 - `/start`: saves/updates user in database and sends welcome message with role (`user`, `admin`, `superadmin`).
 - `/prompt <userid>`: superadmin-only command to promote a user to admin.
 
+### Superadmin panel buttons (shown on `/start`)
+
+When superadmin sends `/start`, bot shows inline buttons:
+- `CHECK USERS` → sends role `USER` list
+- `CHECK ADMINS` → sends role `ADMIN` list
+
 ### Promotion behavior
 
 When a user is promoted:
@@ -59,6 +65,7 @@ The bot sends event logs to `LOG_GROUP_ID`, including:
 - `/start` success/failure
 - `/prompt` success/failure
 - unauthorized promotion attempts
+- superadmin panel button actions
 
 ## Health endpoint
 

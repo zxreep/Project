@@ -2,6 +2,7 @@ import { Bot } from "grammy";
 import { env } from "../config/env";
 import { registerPromptHandler } from "../handlers/prompt";
 import { registerStartHandler } from "../handlers/start";
+import { registerSuperadminPanelHandlers } from "../handlers/superadminPanel";
 import { sendLogToGroup } from "../services/logGroup";
 import type { BotContext } from "../types/bot";
 import { logger } from "../utils/logger";
@@ -34,6 +35,7 @@ export function createBot(): Bot<BotContext> {
 
   registerStartHandler(bot);
   registerPromptHandler(bot);
+  registerSuperadminPanelHandlers(bot);
 
   return bot;
 }

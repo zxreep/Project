@@ -5,6 +5,7 @@ import { sendLogToGroup } from "../services/logGroup";
 import { resolveRole, humanRole } from "../services/userRole";
 import type { BotContext } from "../types/bot";
 import { logger } from "../utils/logger";
+import { superadminKeyboard } from "./superadminPanel";
 
 const baseMessage = `👋 Welcome to Smart Quiz Bot!
 
@@ -48,19 +49,29 @@ export function registerStartHandler(bot: Bot<BotContext>): void {
       });
 
       const savedRole = (user as { role?: string }).role;
+      const roleLabel = humanRole(savedRole ?? role);
 
       logger.info("Handled /start", {
         telegramId: telegramId.toString(),
-        role: savedRole ?? role,
+        role: roleLabel,
         username: ctx.from.username ?? null
       });
 
       await sendLogToGroup(
         ctx.api,
-        `✅ <bold>/start success</b>\nUser: <code>${ctx.from.username ?? "n/a"}</code>\nID: <code>${telegramId.toString()}</code>\nRole: <b>${humanRole(savedRole ?? role)}</bold>`
+        `✅ <b>/start success</b>\nUser: <code>${ctx.from.username ?? "n/a"}</code>\nID: <code>${telegramId.toString()}</code>\nRole: <b>${roleLabel}</b>`
       );
 
-      await ctx.reply(`${baseMessage}\n\n🔐 Your role: ${humanRole(savedRole ?? role)}`);
+      const fullMessage = `${baseMessage}\n\n🔐 Your role: ${roleLabel}`;
+
+      if (roleLabel === "superadmin") {
+        await ctx.reply(fullMessage, {
+          reply_markup: superadminKeyboard
+        });
+        return;
+      }
+
+      await ctx.reply(fullMessage);
     } catch (error) {
       logger.error("Failed handling /start", error, {
         telegramId: telegramId.toString(),
@@ -69,7 +80,7 @@ export function registerStartHandler(bot: Bot<BotContext>): void {
 
       await sendLogToGroup(
         ctx.api,
-        `❌ <bold>/start failed</bold>\nUser: <code>${ctx.from.username ?? "n/a"}</code>\nID: <code>${telegramId.toString()}</code>`
+        `❌ <b>/start failed</b>\nUser: <code>${ctx.from.username ?? "n/a"}</code>\nID: <code>${telegramId.toString()}</code>`
       );
 
       await ctx.reply("Sorry, something went wrong while setting up your account. Please try again.");
