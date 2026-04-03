@@ -1,4 +1,5 @@
 import { createBot } from "./bot";
+import { prisma } from "./db/prisma";
 
 async function bootstrap(): Promise<void> {
   const bot = createBot();
@@ -14,7 +15,18 @@ async function bootstrap(): Promise<void> {
   });
 }
 
-bootstrap().catch((error) => {
+bootstrap().catch(async (error) => {
   console.error("Failed to start bot", error);
+  await prisma.$disconnect();
   process.exit(1);
+});
+
+process.on("SIGINT", async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  await prisma.$disconnect();
+  process.exit(0);
 });

@@ -1,7 +1,3 @@
-import { Context, SessionFlavor } from "grammy";
+import { Context } from "grammy";
 
-export interface SessionData {
-  startedAt?: string;
-}
-
-export type BotContext = Context & SessionFlavor<SessionData>;
+export type BotContext = Context;

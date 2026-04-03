@@ -16,6 +16,7 @@ cp .env.example .env
 Fill `.env` values:
 - `BOT_TOKEN`: Telegram bot token from BotFather
 - `DATABASE_URL`: Neon Postgres connection string
+- `SUPERADMIN_ID`: Telegram user id for superadmin access
 
 ## 2) Generate Prisma client
 
@@ -35,7 +36,10 @@ npm run prisma:push
 npm run dev
 ```
 
-When a user sends `/start`, the bot replies with the Smart Quiz welcome message.
+## Commands
+
+- `/start`: saves/updates user in database and sends welcome message with current role (`user`, `admin`, `superadmin`).
+- `/prompt <userid>`: superadmin-only command to promote a user to admin.
 
 ## 4) Deploy to Render
 
@@ -46,6 +50,7 @@ Render steps:
 2. Set environment variables in Render dashboard:
    - `BOT_TOKEN`
    - `DATABASE_URL`
+   - `SUPERADMIN_ID`
 3. Deploy.
 
 ## Project Structure
@@ -62,6 +67,7 @@ Render steps:
 │  ├─ db/
 │  │  └─ prisma.ts
 │  ├─ handlers/
+│  │  ├─ prompt.ts
 │  │  └─ start.ts
 │  ├─ types/
 │  │  └─ bot.ts
