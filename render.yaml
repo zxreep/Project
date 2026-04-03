@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: smart-quiz-telegram-bot
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build && npm run prisma:generate
+    startCommand: npm run start
+    healthCheckPath: /health
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPERADMIN_ID
+        sync: false
+      - key: PORT
+        value: 10000
