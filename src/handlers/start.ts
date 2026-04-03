@@ -1,19 +1,19 @@
-import { Role } from "@prisma/client";
 import { Bot } from "grammy";
-import { env } from "../config/env";
 import { prisma } from "../db/prisma";
+import { resolveRole, humanRole } from "../services/userRole";
 import type { BotContext } from "../types/bot";
+import { logger } from "../utils/logger";
 
-function formatRole(role: Role): "user" | "admin" | "superadmin" {
-  switch (role) {
-    case Role.ADMIN:
-      return "admin";
-    case Role.SUPERADMIN:
-      return "superadmin";
-    default:
-      return "user";
-  }
-}
+const baseMessage = `👋 Welcome to Smart Quiz Bot!
+
+🎯 Play live quizzes with friends
+🏆 Compete on real-time leaderboards
+📚 Get shared study materials & updates
+
+🚀 What you can do:
+• Join live quiz rooms
+• Track your score & rank
+• Receive important content`;
 
 export function registerStartHandler(bot: Bot<BotContext>): void {
   bot.command("start", async (ctx) => {
@@ -23,38 +23,41 @@ export function registerStartHandler(bot: Bot<BotContext>): void {
     }
 
     const telegramId = BigInt(ctx.from.id);
-    const resolvedRole = telegramId === env.SUPERADMIN_ID ? Role.SUPERADMIN : Role.USER;
 
-    const user = await prisma.user.upsert({
-      where: { telegramId },
-      update: {
-        username: ctx.from.username ?? null,
-        firstName: ctx.from.first_name ?? null,
-        lastName: ctx.from.last_name ?? null,
-        role: telegramId === env.SUPERADMIN_ID ? Role.SUPERADMIN : undefined
-      },
-      create: {
-        telegramId,
-        username: ctx.from.username ?? null,
-        firstName: ctx.from.first_name ?? null,
-        lastName: ctx.from.last_name ?? null,
-        role: resolvedRole
-      }
-    });
+    try {
+      const existingUser = await prisma.user.findUnique({ where: { telegramId } });
+      const role = resolveRole(telegramId, existingUser);
 
-    const startMessage = `👋 Welcome to Smart Quiz Bot!
+      const user = await prisma.user.upsert({
+        where: { telegramId },
+        update: {
+          username: ctx.from.username ?? null,
+          firstName: ctx.from.first_name ?? null,
+          lastName: ctx.from.last_name ?? null,
+          role
+        },
+        create: {
+          telegramId,
+          username: ctx.from.username ?? null,
+          firstName: ctx.from.first_name ?? null,
+          lastName: ctx.from.last_name ?? null,
+          role
+        }
+      });
 
-🎯 Play live quizzes with friends
-🏆 Compete on real-time leaderboards
-📚 Get shared study materials & updates
+      logger.info("Handled /start", {
+        telegramId: telegramId.toString(),
+        role: user.role,
+        username: ctx.from.username ?? null
+      });
 
-🚀 What you can do:
-• Join live quiz rooms
-• Track your score & rank
-• Receive important content
-
-🔐 Your role: ${formatRole(user.role)}`;
-
-    await ctx.reply(startMessage);
+      await ctx.reply(`${baseMessage}\n\n🔐 Your role: ${humanRole(user.role)}`);
+    } catch (error) {
+      logger.error("Failed handling /start", error, {
+        telegramId: telegramId.toString(),
+        username: ctx.from.username ?? null
+      });
+      await ctx.reply("Sorry, something went wrong while setting up your account. Please try again.");
+    }
   });
 }

@@ -38,8 +38,20 @@ npm run dev
 
 ## Commands
 
-- `/start`: saves/updates user in database and sends welcome message with current role (`user`, `admin`, `superadmin`).
+- `/start`: saves/updates user in database and sends welcome message with role (`user`, `admin`, `superadmin`).
 - `/prompt <userid>`: superadmin-only command to promote a user to admin.
+
+## Logging / Debugging
+
+The bot writes structured JSON logs for:
+- startup/shutdown lifecycle
+- database connection state
+- every incoming Telegram update
+- command success/failures
+- unhandled exceptions and promise rejections
+- grammY API/network/runtime errors
+
+These logs are designed to help troubleshoot Render exits and runtime failures.
 
 ## 4) Deploy to Render
 
@@ -69,8 +81,12 @@ Render steps:
 │  ├─ handlers/
 │  │  ├─ prompt.ts
 │  │  └─ start.ts
+│  ├─ services/
+│  │  └─ userRole.ts
 │  ├─ types/
 │  │  └─ bot.ts
+│  ├─ utils/
+│  │  └─ logger.ts
 │  └─ index.ts
 ├─ .env.example
 ├─ render.yaml
