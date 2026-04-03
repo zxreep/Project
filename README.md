@@ -17,6 +17,7 @@ Fill `.env` values:
 - `BOT_TOKEN`: Telegram bot token from BotFather
 - `DATABASE_URL`: Neon Postgres connection string
 - `SUPERADMIN_ID`: Telegram user id for superadmin access
+- `LOG_GROUP_ID`: Telegram group/channel id for audit logs
 - `PORT`: HTTP port for `/health` (Render sets this automatically)
 
 ## 2) Generate Prisma client
@@ -42,21 +43,26 @@ npm run dev
 - `/start`: saves/updates user in database and sends welcome message with role (`user`, `admin`, `superadmin`).
 - `/prompt <userid>`: superadmin-only command to promote a user to admin.
 
+### Promotion behavior
+
+When a user is promoted:
+- promoted user receives formatted promotion message
+- superadmin receives:
+  - `USER <username> (<USERID>)`
+  - `Successfully promoted to Admin.`
+- user role is updated to `ADMIN` in database
+
+## Group logging
+
+The bot sends event logs to `LOG_GROUP_ID`, including:
+- incoming updates
+- `/start` success/failure
+- `/prompt` success/failure
+- unauthorized promotion attempts
+
 ## Health endpoint
 
 - `GET /health` returns JSON indicating the process is alive.
-- Useful for Render health checks and uptime probes.
-
-## Logging / Debugging
-
-The bot writes structured JSON logs for:
-- startup/shutdown lifecycle
-- database connection state
-- prisma schema sync (`prisma db push`) output
-- every incoming Telegram update
-- command success/failures
-- unhandled exceptions and promise rejections
-- grammY API/network/runtime errors
 
 ## 4) Deploy to Render
 
@@ -68,33 +74,5 @@ Render steps:
    - `BOT_TOKEN`
    - `DATABASE_URL`
    - `SUPERADMIN_ID`
+   - `LOG_GROUP_ID`
 3. Deploy.
-
-## Project Structure
-
-```text
-.
-├─ prisma/
-│  └─ schema.prisma
-├─ src/
-│  ├─ bot/
-│  │  └─ index.ts
-│  ├─ config/
-│  │  └─ env.ts
-│  ├─ db/
-│  │  └─ prisma.ts
-│  ├─ handlers/
-│  │  ├─ prompt.ts
-│  │  └─ start.ts
-│  ├─ services/
-│  │  └─ userRole.ts
-│  ├─ types/
-│  │  └─ bot.ts
-│  ├─ utils/
-│  │  └─ logger.ts
-│  └─ index.ts
-├─ .env.example
-├─ render.yaml
-├─ package.json
-└─ tsconfig.json
-```

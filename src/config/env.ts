@@ -18,7 +18,7 @@ function parseBigIntEnv(name: string): bigint {
   try {
     return BigInt(value);
   } catch {
-    throw new Error(`Environment variable ${name} must be a valid integer Telegram user id.`);
+    throw new Error(`Environment variable ${name} must be a valid integer id.`);
   }
 }
 
@@ -37,5 +37,6 @@ export const env = {
   BOT_TOKEN: requireEnv("BOT_TOKEN"),
   DATABASE_URL: requireEnv("DATABASE_URL"),
   SUPERADMIN_ID: parseBigIntEnv("SUPERADMIN_ID"),
+  LOG_GROUP_ID: parseBigIntEnv("LOG_GROUP_ID"),
   PORT: parsePort()
 };

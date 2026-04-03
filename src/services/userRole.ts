@@ -1,28 +1,31 @@
-import { Role, type User } from "@prisma/client";
-import { env } from "../config/env";
+export type UserRole = "USER" | "ADMIN" | "SUPERADMIN";
 
-export function resolveRole(telegramId: bigint, existingUser: User | null): Role {
-  if (telegramId === env.SUPERADMIN_ID) {
-    return Role.SUPERADMIN;
+interface MinimalUser {
+  role?: UserRole | null;
+}
+
+export function resolveRole(telegramId: bigint, superadminId: bigint, existingUser: MinimalUser | null): UserRole {
+  if (telegramId === superadminId) {
+    return "SUPERADMIN";
   }
 
-  if (!existingUser) {
-    return Role.USER;
+  if (!existingUser?.role) {
+    return "USER";
   }
 
-  if (existingUser.role === Role.SUPERADMIN) {
-    return Role.USER;
+  if (existingUser.role === "SUPERADMIN") {
+    return "USER";
   }
 
   return existingUser.role;
 }
 
-export function humanRole(role: Role): "user" | "admin" | "superadmin" {
-  if (role === Role.SUPERADMIN) {
+export function humanRole(role: string | null | undefined): "user" | "admin" | "superadmin" {
+  if (role === "SUPERADMIN") {
     return "superadmin";
   }
 
-  if (role === Role.ADMIN) {
+  if (role === "ADMIN") {
     return "admin";
   }
 

@@ -1,7 +1,7 @@
-import { Role } from "@prisma/client";
 import { Bot } from "grammy";
 import { env } from "../config/env";
 import { prisma } from "../db/prisma";
+import { sendLogToGroup } from "../services/logGroup";
 import type { BotContext } from "../types/bot";
 import { logger } from "../utils/logger";
 
@@ -17,6 +17,20 @@ function parseUserId(input?: string): bigint | null {
   }
 }
 
+const promotedMessage = `🎉 <bold>You're Now an Admin!</bold>
+
+Congratulations! You’ve been promoted to <bold>Admin</bold> 🚀
+
+🛠 You can now:
+• Create and manage quizzes
+• Broadcast messages & files
+• Manage your assigned users
+• Access admin tools
+
+📌 Use your access responsibly and help manage the system smoothly.
+
+Let’s get started 💼`;
+
 export function registerPromptHandler(bot: Bot<BotContext>): void {
   bot.command("prompt", async (ctx) => {
     if (!ctx.from) {
@@ -31,6 +45,12 @@ export function registerPromptHandler(bot: Bot<BotContext>): void {
         actorId: actorId.toString(),
         username: ctx.from.username ?? null
       });
+
+      await sendLogToGroup(
+        ctx.api,
+        `⚠️ <b>Unauthorized /prompt attempt</b>\nActor: <code>${actorId.toString()}</code>\nUsername: <code>${ctx.from.username ?? "n/a"}</code>`
+      );
+
       await ctx.reply("Only superadmin can use this command.");
       return;
     }
@@ -49,12 +69,12 @@ export function registerPromptHandler(bot: Bot<BotContext>): void {
     }
 
     try {
-      await prisma.user.upsert({
+      const promotedUser = await prisma.user.upsert({
         where: { telegramId: targetTelegramId },
-        update: { role: Role.ADMIN },
+        update: { ...( { role: "ADMIN" } as Record<string, unknown> ) },
         create: {
           telegramId: targetTelegramId,
-          role: Role.ADMIN
+          ...( { role: "ADMIN" } as Record<string, unknown> )
         }
       });
 
@@ -63,12 +83,28 @@ export function registerPromptHandler(bot: Bot<BotContext>): void {
         targetId: targetTelegramId.toString()
       });
 
-      await ctx.reply(`User ${targetTelegramId.toString()} has been promoted to admin.`);
+      await ctx.api.sendMessage(targetTelegramId.toString(), promotedMessage, {
+        parse_mode: "HTML"
+      });
+
+      const targetUsername = promotedUser.username ?? "unknown";
+      await ctx.reply(`USER ${targetUsername} (${targetTelegramId.toString()})\nSuccessfully promoted to Admin.`);
+
+      await sendLogToGroup(
+        ctx.api,
+        `👑 <b>User promoted to Admin</b>\nBy: <code>${actorId.toString()}</code>\nUser: <code>${targetUsername}</code>\nID: <code>${targetTelegramId.toString()}</code>`
+      );
     } catch (error) {
       logger.error("Failed handling /prompt", error, {
         actorId: actorId.toString(),
         targetId: targetTelegramId.toString()
       });
+
+      await sendLogToGroup(
+        ctx.api,
+        `❌ <b>/prompt failed</b>\nActor: <code>${actorId.toString()}</code>\nTarget: <code>${targetTelegramId.toString()}</code>`
+      );
+
       await ctx.reply("Could not promote this user right now. Please try again.");
     }
   });
